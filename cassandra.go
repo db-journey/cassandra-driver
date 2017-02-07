@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gemnasium/migrate/driver"
-	"github.com/gemnasium/migrate/file"
-	"github.com/gemnasium/migrate/migrate/direction"
+	"github.com/db-journey/migrate/direction"
+	"github.com/db-journey/migrate/driver"
+	"github.com/db-journey/migrate/file"
 	"github.com/gocql/gocql"
 )
 
