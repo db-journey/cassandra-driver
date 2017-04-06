@@ -19,6 +19,9 @@ type Driver struct {
 	session *gocql.Session
 }
 
+// make sure our driver still implements the driver.Driver interface
+var _ driver.Driver = (*Driver)(nil)
+
 const (
 	tableName = "schema_migrations"
 )
@@ -162,6 +165,11 @@ func (driver *Driver) Versions() (file.Versions, error) {
 	err := iter.Close()
 	sort.Sort(sort.Reverse(versions))
 	return versions, err
+}
+
+// Execute a SQL statement
+func (driver *Driver) Execute(statement string) error {
+	return driver.session.Query(statement).Exec()
 }
 
 func init() {
