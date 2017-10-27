@@ -42,12 +42,9 @@ func (driver *Driver) Initialize(rawurl string) error {
 	cluster.Timeout = 1 * time.Minute
 
 	if consistencyStr := u.Query().Get("consistency"); len(consistencyStr) > 0 {
-		consistency, err := gocql.ParseConsistency(consistencyStr)
-		if err != nil {
-			return fmt.Errorf("Failed to parse consistency \"%s\": %v", consistencyStr, err)
-		}
-
-		cluster.Consistency = consistency
+		// Warning: gocql.ParseConsistency will PANIC if there's an error.
+		// See https://github.com/gocql/gocql/commit/f52d33ca51e4216a6bf6af74f80e023e69700afd
+		cluster.Consistency = gocql.ParseConsistency(consistencyStr)
 	}
 
 	if len(u.Query().Get("protocol")) > 0 {
