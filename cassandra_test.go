@@ -9,7 +9,6 @@ import (
 
 	"github.com/db-journey/migrate/direction"
 	"github.com/db-journey/migrate/file"
-	pipep "github.com/db-journey/migrate/pipe"
 	"github.com/gocql/gocql"
 )
 
@@ -90,11 +89,9 @@ func TestMigrate(t *testing.T) {
 		},
 	}
 
-	pipe := pipep.New()
-	go d.Migrate(files[0], pipe)
-	errs := pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err = d.Migrate(files[0])
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	version, err := d.Version()
@@ -117,17 +114,13 @@ func TestMigrate(t *testing.T) {
 		t.Errorf("Expected versions to be: %v, got: %v", expectedVersions, versions)
 	}
 
-	pipe = pipep.New()
-	go d.Migrate(files[1], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err = d.Migrate(files[1])
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	pipe = pipep.New()
-	go d.Migrate(files[2], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) == 0 {
+	err = d.Migrate(files[2])
+	if err == nil {
 		t.Error("Expected test case to fail")
 	}
 

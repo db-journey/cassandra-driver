@@ -101,20 +101,19 @@ func (driver *Driver) FilenameExtension() string {
 	return "cql"
 }
 
-func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
-	var err error
+func (driver *Driver) FileTemplate() []byte {
+	return []byte("")
+}
+
+func (driver *Driver) Migrate(f file.File) (err error) {
 	defer func() {
 		if err != nil {
 			// Invert version direction if we couldn't apply the changes for some reason.
 			if errRollback := driver.session.Query("DELETE FROM "+tableName+" WHERE version = ?", f.Version).Exec(); errRollback != nil {
-				pipe <- errRollback
+				err = fmt.Errorf("%s; failed to rollback version: %s", err, errRollback)
 			}
-			pipe <- err
 		}
-		close(pipe)
 	}()
-
-	pipe <- f
 
 	if err = f.ReadContent(); err != nil {
 		return
@@ -140,6 +139,7 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 			return
 		}
 	}
+	return
 }
 
 // Version returns the current migration version.
