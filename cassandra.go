@@ -33,7 +33,8 @@ const (
 // cassandra://localhost/SpaceOfKeys?protocol=4
 // cassandra://localhost/SpaceOfKeys?protocol=4&consistency=all
 // cassandra://localhost/SpaceOfKeys?consistency=quorum
-func (driver *Driver) Initialize(rawurl string) error {
+func Open(rawurl string) (driver.Driver, error) {
+	driver := &Driver{}
 	u, err := url.Parse(rawurl)
 
 	cluster := gocql.NewCluster(u.Host)
@@ -50,7 +51,7 @@ func (driver *Driver) Initialize(rawurl string) error {
 	if len(u.Query().Get("protocol")) > 0 {
 		protoversion, err := strconv.Atoi(u.Query().Get("protocol"))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		cluster.ProtoVersion = protoversion
@@ -65,7 +66,7 @@ func (driver *Driver) Initialize(rawurl string) error {
 		password, passwordSet := u.User.Password()
 
 		if passwordSet == false {
-			return fmt.Errorf("Missing password. Please provide password.")
+			return nil, fmt.Errorf("Missing password. Please provide password.")
 		}
 
 		cluster.Authenticator = gocql.PasswordAuthenticator{
@@ -77,14 +78,14 @@ func (driver *Driver) Initialize(rawurl string) error {
 
 	driver.session, err = cluster.CreateSession()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := driver.ensureVersionTableExists(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return driver, nil
 }
 
 func (driver *Driver) Close() error {
@@ -95,14 +96,6 @@ func (driver *Driver) Close() error {
 func (driver *Driver) ensureVersionTableExists() error {
 	err := driver.session.Query("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint primary key);").Exec()
 	return err
-}
-
-func (driver *Driver) FilenameExtension() string {
-	return "cql"
-}
-
-func (driver *Driver) FileTemplate() []byte {
-	return []byte("")
 }
 
 func (driver *Driver) Migrate(f file.File) (err error) {
@@ -169,6 +162,12 @@ func (driver *Driver) Execute(statement string) error {
 	return driver.session.Query(statement).Exec()
 }
 
+type factory struct{}
+
+func (f factory) New(url string) (driver.Driver, error) {
+	return Open(url)
+}
+
 func init() {
-	driver.RegisterDriver("cassandra", &Driver{})
+	driver.Register("cassandra", "cql", nil, factory{})
 }

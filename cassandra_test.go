@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/db-journey/migrate/direction"
+	"github.com/db-journey/migrate/driver"
 	"github.com/db-journey/migrate/file"
 	"github.com/gocql/gocql"
 )
@@ -44,8 +45,8 @@ func TestMigrate(t *testing.T) {
 	session, err = cluster.CreateSession()
 	driverURL = "cassandra://" + host + ":" + port + "/migrate?protocol=4"
 
-	d := &Driver{}
-	if err := d.Initialize(driverURL); err != nil {
+	var d driver.Driver
+	if d, err = Open(driverURL); err != nil {
 		t.Fatal(err)
 	}
 
