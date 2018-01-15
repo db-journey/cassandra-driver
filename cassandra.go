@@ -162,12 +162,6 @@ func (driver *Driver) Execute(statement string) error {
 	return driver.session.Query(statement).Exec()
 }
 
-type factory struct{}
-
-func (f factory) New(url string) (driver.Driver, error) {
-	return Open(url)
-}
-
 func init() {
-	driver.Register("cassandra", "cql", nil, factory{})
+	driver.Register("cassandra", "cql", nil, Open)
 }
