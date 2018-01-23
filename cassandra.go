@@ -33,7 +33,8 @@ const (
 // cassandra://localhost/SpaceOfKeys?protocol=4
 // cassandra://localhost/SpaceOfKeys?protocol=4&consistency=all
 // cassandra://localhost/SpaceOfKeys?consistency=quorum
-func (driver *Driver) Initialize(rawurl string) error {
+func Open(rawurl string) (driver.Driver, error) {
+	driver := &Driver{}
 	u, err := url.Parse(rawurl)
 
 	cluster := gocql.NewCluster(u.Host)
@@ -50,7 +51,7 @@ func (driver *Driver) Initialize(rawurl string) error {
 	if len(u.Query().Get("protocol")) > 0 {
 		protoversion, err := strconv.Atoi(u.Query().Get("protocol"))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		cluster.ProtoVersion = protoversion
@@ -65,7 +66,7 @@ func (driver *Driver) Initialize(rawurl string) error {
 		password, passwordSet := u.User.Password()
 
 		if passwordSet == false {
-			return fmt.Errorf("Missing password. Please provide password.")
+			return nil, fmt.Errorf("Missing password. Please provide password.")
 		}
 
 		cluster.Authenticator = gocql.PasswordAuthenticator{
@@ -77,14 +78,14 @@ func (driver *Driver) Initialize(rawurl string) error {
 
 	driver.session, err = cluster.CreateSession()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := driver.ensureVersionTableExists(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return driver, nil
 }
 
 func (driver *Driver) Close() error {
@@ -97,24 +98,15 @@ func (driver *Driver) ensureVersionTableExists() error {
 	return err
 }
 
-func (driver *Driver) FilenameExtension() string {
-	return "cql"
-}
-
-func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
-	var err error
+func (driver *Driver) Migrate(f file.File) (err error) {
 	defer func() {
 		if err != nil {
 			// Invert version direction if we couldn't apply the changes for some reason.
 			if errRollback := driver.session.Query("DELETE FROM "+tableName+" WHERE version = ?", f.Version).Exec(); errRollback != nil {
-				pipe <- errRollback
+				err = fmt.Errorf("%s; failed to rollback version: %s", err, errRollback)
 			}
-			pipe <- err
 		}
-		close(pipe)
 	}()
-
-	pipe <- f
 
 	if err = f.ReadContent(); err != nil {
 		return
@@ -140,6 +132,7 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 			return
 		}
 	}
+	return
 }
 
 // Version returns the current migration version.
@@ -170,5 +163,5 @@ func (driver *Driver) Execute(statement string) error {
 }
 
 func init() {
-	driver.RegisterDriver("cassandra", &Driver{})
+	driver.Register("cassandra", "cql", nil, Open)
 }
