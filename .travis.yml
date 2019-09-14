@@ -5,8 +5,6 @@ go:
   - "1.11"
   - "1.12"
   - "1.13"
-  - tip
-
 
 go_import_path: github.com/db-journey/cassandra-driver
 
