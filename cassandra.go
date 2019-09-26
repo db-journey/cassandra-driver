@@ -75,6 +75,15 @@ func Open(rawurl string) (driver.Driver, error) {
 		}
 
 	}
+	// handle ssl option
+	if sslmode := u.Query().Get("sslmode"); sslmode != "" && sslmode != "disable" {
+		cluster.SslOpts = &gocql.SslOptions{
+			CaPath:                 u.Query().Get("sslrootcert"),
+			CertPath:               u.Query().Get("sslcert"),
+			KeyPath:                u.Query().Get("sslkey"),
+			EnableHostVerification: sslmode == "verify-full",
+		}
+	}
 
 	driver.session, err = cluster.CreateSession()
 	if err != nil {
